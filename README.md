@@ -63,14 +63,14 @@ lib_deps =
 1. Clone or download this library into your project's `lib` folder:
    ```bash
    cd your_project/lib
-   git clone <repository-url> MANIGLIO_APDS_LIBRARY
+   git clone https://github.com/federicomaniglio/MANIGLIO_APDS9960_ColorSensor.git "Easy APDS9960_ColorSensor"
    ```
 
 2. Or add it as a dependency in `platformio.ini`:
    ```ini
    lib_deps =
        sparkfun/SparkFun APDS9960 RGB and Gesture Sensor@^1.4.3
-       MANIGLIO_APDS_LIBRARY
+       fmaniglio/Easy APDS9960_ColorSensor@^1.0.0
    ```
 
 ### Arduino IDE
