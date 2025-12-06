@@ -40,21 +40,11 @@ You can use different pins by calling `Wire.begin(SDA_PIN, SCL_PIN)` before `sen
 This library requires the following dependency:
 
 - **SparkFun APDS9960 RGB and Gesture Sensor** (v1.4.3 or higher)
-  - Repository: [SparkFun_APDS9960_RGB_and_Gesture_Sensor](https://github.com/sparkfun/SparkFun_APDS-9960_RGB_and_Gesture_Sensor_Arduino_Library)
+  - Repository: [SparkFun_APDS9960_RGB_and_Gesture_Sensor](https://registry.platformio.org/libraries/sparkfun/SparkFun%20APDS9960%20RGB%20and%20Gesture%20Sensor)
 
 ### PlatformIO Installation
 
-The dependency is automatically installed when using PlatformIO. The `platformio.ini` file already includes:
-```ini
-lib_deps =
-    sparkfun/SparkFun APDS9960 RGB and Gesture Sensor@^1.4.3
-```
-### Arduino IDE Installation
-
-1. Open Arduino IDE
-2. Go to **Sketch → Include Library → Manage Libraries**
-3. Search for "SparkFun APDS9960"
-4. Install **SparkFun APDS9960 RGB and Gesture Sensor** library
+The dependency is automatically installed when using PlatformIO.
 
 ## Installation
 
@@ -69,7 +59,6 @@ lib_deps =
 2. Or add it as a dependency in `platformio.ini`:
    ```ini
    lib_deps =
-       sparkfun/SparkFun APDS9960 RGB and Gesture Sensor@^1.4.3
        fmaniglio/Easy APDS9960_ColorSensor@^1.0.0
    ```
 
