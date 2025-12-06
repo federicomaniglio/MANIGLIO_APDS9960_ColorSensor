@@ -59,7 +59,7 @@ The dependency is automatically installed when using PlatformIO.
 2. Or add it as a dependency in `platformio.ini`:
    ```ini
    lib_deps =
-       fmaniglio/Easy APDS9960_ColorSensor@^1.0.0
+       fmaniglio/Easy APDS9960_ColorSensor@^1.0.1
    ```
 
 ### Arduino IDE
