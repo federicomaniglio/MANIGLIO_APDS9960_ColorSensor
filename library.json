@@ -1,6 +1,6 @@
 {
   "name": "Easy APDS9960_ColorSensor",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Easy to use color sensing library for APDS9960 RGB sensor with automatic calibration, multiple output formats, and robust error handling",
   "keywords": "apds9960, color, sensor, rgb, i2c, esp32, arduino, calibration, gesture",
   "repository":
