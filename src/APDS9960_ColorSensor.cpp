@@ -9,6 +9,35 @@
 #include <SparkFun_APDS9960.h>
 
 /**
+ * @brief Get human-readable name of a standard color
+ * 
+ * Converts a StandardColor enum value to its string representation.
+ * This is a free function that can be used independently of the sensor class.
+ * 
+ * @param color StandardColor enum value
+ * @return Constant string with color name in uppercase
+ * 
+ * @note Returns "UNKNOWN" for invalid enum values
+ * @note All color names are in English and uppercase
+ */
+const char* getStandardColorName(StandardColor color) {
+    switch (color) {
+        case StandardColor::UNKNOWN: return "UNKNOWN";
+        case StandardColor::RED:     return "RED";
+        case StandardColor::ORANGE:  return "ORANGE";
+        case StandardColor::YELLOW:  return "YELLOW";
+        case StandardColor::GREEN:   return "GREEN";
+        case StandardColor::CYAN:    return "CYAN";
+        case StandardColor::BLUE:    return "BLUE";
+        case StandardColor::PURPLE:  return "PURPLE";
+        case StandardColor::MAGENTA: return "MAGENTA";
+        case StandardColor::WHITE:   return "WHITE";
+        case StandardColor::BLACK:   return "BLACK";
+        default:                     return "UNKNOWN";
+    }
+}
+
+/**
  * @brief Constructor - initializes all calibration values to zero
  * 
  * Sets the sensor to NOT_CALIBRATED state. All color channel maximums
@@ -399,6 +428,260 @@ String ADPS9960_ColorSensor::getColorHexString() {
 
     return {buffer};
 }
+
+/**
+ * @brief Check if current color matches custom HSV ranges
+ * 
+ * Reads the current HSV color and checks if all components fall within
+ * the specified ranges. Useful for detecting specific color ranges.
+ * 
+ * @param hMin Minimum hue value (0-360 degrees)
+ * @param hMax Maximum hue value (0-360 degrees)
+ * @param sMin Minimum saturation (0.0-1.0)
+ * @param sMax Maximum saturation (0.0-1.0)
+ * @param vMin Minimum value/brightness (0.0-1.0)
+ * @param vMax Maximum value/brightness (0.0-1.0)
+ * @return true if color is within all ranges, false otherwise
+ * 
+ * @note Returns false if sensor read fails
+ * @note Handles hue wrap-around (e.g., red crossing 0/360)
+ */
+bool ADPS9960_ColorSensor::isColorInRange(float hMin, float hMax, 
+                                         float sMin, float sMax, 
+                                         float vMin, float vMax) {
+    HSV hsv{};
+    if (!readColorHSV(hsv)) {
+        return false;
+    }
+
+    // Handle hue wrap-around (e.g., red: 350-10 degrees)
+    bool hueInRange;
+    if (hMin <= hMax) {
+        hueInRange = (hsv.h >= hMin && hsv.h <= hMax);
+    } else {
+        // Wrap-around case
+        hueInRange = (hsv.h >= hMin || hsv.h <= hMax);
+    }
+
+    return hueInRange && 
+           (hsv.s >= sMin && hsv.s <= sMax) &&
+           (hsv.v >= vMin && hsv.v <= vMax);
+}
+
+/**
+ * @brief Check if current color matches a standard predefined color
+ * 
+ * Compares the current sensor reading against predefined HSV ranges
+ * for common colors. Uses a tolerance factor to allow for variations
+ * in lighting and sensor readings.
+ * 
+ * Standard color definitions (with NO overlap):
+ * - RED:     H=[340-360) ∪ [0-20), S≥0.5, V≥0.3
+ * - ORANGE:  H=[20-50), S≥0.5, V≥0.4
+ * - YELLOW:  H=[50-80), S≥0.5, V≥0.5
+ * - GREEN:   H=[80-165), S≥0.4, V≥0.3
+ * - CYAN:    H=[165-210), S≥0.4, V≥0.4
+ * - BLUE:    H=[210-265), S≥0.4, V≥0.3
+ * - PURPLE:  H=[265-295), S≥0.4, V≥0.3
+ * - MAGENTA: H=[295-340), S≥0.5, V≥0.4
+ * - WHITE:   S<0.2, V≥0.7
+ * - BLACK:   V<0.2
+ * 
+ * @param color StandardColor enum value to check
+ * @param tolerance Tolerance factor (0.0-1.0, default 0.15 = 15%)
+ * @return true if color matches the standard, false otherwise
+ */
+bool ADPS9960_ColorSensor::isStandardColor(StandardColor color, float tolerance) {
+    HSV hsv{};
+    if (!readColorHSV(hsv)) {
+        return false;
+    }
+
+    // Clamp tolerance to valid range
+    if (tolerance < 0.0f) tolerance = 0.0f;
+    if (tolerance > 1.0f) tolerance = 1.0f;
+
+    switch (color) {
+        case StandardColor::UNKNOWN:
+            return false;
+
+        case StandardColor::RED:
+            // Red wraps around 0/360: [340-360) and [0-20)
+            return (hsv.h < 20.0f || hsv.h >= 340.0f) && 
+                   hsv.s >= (0.5f - tolerance) && 
+                   hsv.v >= (0.3f - tolerance);
+
+        case StandardColor::ORANGE:
+            // [20-50)
+            return (hsv.h >= 20.0f && hsv.h < 50.0f) &&
+                   hsv.s >= (0.5f - tolerance) &&
+                   hsv.v >= (0.4f - tolerance);
+
+        case StandardColor::YELLOW:
+            // [50-80)
+            return (hsv.h >= 50.0f && hsv.h < 80.0f) &&
+                   hsv.s >= (0.5f - tolerance) &&
+                   hsv.v >= (0.5f - tolerance);
+
+        case StandardColor::GREEN:
+            // [80-165)
+            return (hsv.h >= 80.0f && hsv.h < 165.0f) &&
+                   hsv.s >= (0.4f - tolerance) &&
+                   hsv.v >= (0.3f - tolerance);
+
+        case StandardColor::CYAN:
+            // [165-210)
+            return (hsv.h >= 165.0f && hsv.h < 210.0f) &&
+                   hsv.s >= (0.4f - tolerance) &&
+                   hsv.v >= (0.4f - tolerance);
+
+        case StandardColor::BLUE:
+            // [210-265)
+            return (hsv.h >= 210.0f && hsv.h < 265.0f) &&
+                   hsv.s >= (0.4f - tolerance) &&
+                   hsv.v >= (0.3f - tolerance);
+
+        case StandardColor::PURPLE:
+            // [265-295)
+            return (hsv.h >= 265.0f && hsv.h < 295.0f) &&
+                   hsv.s >= (0.4f - tolerance) &&
+                   hsv.v >= (0.3f - tolerance);
+
+        case StandardColor::MAGENTA:
+            // [295-340)
+            return (hsv.h >= 295.0f && hsv.h < 340.0f) &&
+                   hsv.s >= (0.5f - tolerance) &&
+                   hsv.v >= (0.4f - tolerance);
+
+        case StandardColor::WHITE:
+            return hsv.s <= (0.2f + tolerance) &&
+                   hsv.v >= (0.7f - tolerance);
+
+        case StandardColor::BLACK:
+            return hsv.v <= (0.2f + tolerance);
+
+        default:
+            return false;
+    }
+}
+
+/**
+ * @brief Detect and return the closest matching standard color
+ *
+ * Reads the current color from the sensor and determines which standard
+ * color it most closely matches. Uses a priority system:
+ * 1. First checks for BLACK (very low brightness)
+ * 2. Then checks for WHITE (low saturation, high brightness)
+ * 3. Finally checks chromatic colors in hue order
+ *
+ * This ordering prevents false positives (e.g., dark colors being
+ * misidentified as chromatic colors with low brightness).
+ *
+ * Color ranges (NO overlap, using < for upper bounds):
+ * - RED:     [340-360) ∪ [0-20)
+ * - ORANGE:  [20-50)
+ * - YELLOW:  [50-80)
+ * - GREEN:   [80-165)
+ * - CYAN:    [165-210)  ← Your H=199° falls here!
+ * - BLUE:    [210-265)
+ * - PURPLE:  [265-295)
+ * - MAGENTA: [295-340)
+ *
+ * @param tolerance Tolerance factor (0.0-1.0, default 0.15 = 15%)
+ * @return StandardColor enum of detected color, UNKNOWN if no match or read error
+ *
+ * @note Returns UNKNOWN if sensor read fails
+ * @note Returns UNKNOWN if no standard color matches within tolerance
+ */
+StandardColor ADPS9960_ColorSensor::detectColor(float tolerance) {
+    HSV hsv{};
+    if (!readColorHSV(hsv)) {
+        return StandardColor::UNKNOWN;
+    }
+
+    // Clamp tolerance to valid range
+    if (tolerance < 0.0f) tolerance = 0.0f;
+    if (tolerance > 1.0f) tolerance = 1.0f;
+    
+    // Priority 1: Check for BLACK (very low brightness)
+    if (hsv.v <= (0.2f + tolerance)) {
+        return StandardColor::BLACK;
+    }
+
+    if (hsv.s <= (0.2f + tolerance) && hsv.v >= (0.7f - tolerance)) {
+        return StandardColor::WHITE;
+    }
+
+    // Priority 3: Check chromatic colors by hue ranges
+    // Require minimum saturation and value for chromatic colors
+    const float minChromatic_s = 0.3f - tolerance;
+    const float minChromatic_v = 0.25f - tolerance;
+
+    if (hsv.s < minChromatic_s || hsv.v < minChromatic_v) {
+        return StandardColor::UNKNOWN; // Too desaturated or dark for chromatic colors
+    }
+
+    // RED (wraps around 0/360): [340-360) ∪ [0-20)
+    if (hsv.h < 20.0f || hsv.h >= 340.0f) {
+        if (hsv.s >= (0.5f - tolerance) && hsv.v >= (0.3f - tolerance)) {
+            return StandardColor::RED;
+        }
+    }
+
+    // ORANGE: [20-50)
+    if (hsv.h >= 20.0f && hsv.h < 50.0f) {
+        if (hsv.s >= (0.5f - tolerance) && hsv.v >= (0.4f - tolerance)) {
+            return StandardColor::ORANGE;
+        }
+    }
+
+    // YELLOW: [50-80)
+    if (hsv.h >= 50.0f && hsv.h < 80.0f) {
+        if (hsv.s >= (0.5f - tolerance) && hsv.v >= (0.5f - tolerance)) {
+            return StandardColor::YELLOW;
+        }
+    }
+
+    // GREEN: [80-165)
+    if (hsv.h >= 80.0f && hsv.h < 165.0f) {
+        if (hsv.s >= (0.4f - tolerance) && hsv.v >= (0.3f - tolerance)) {
+            return StandardColor::GREEN;
+        }
+    }
+
+    // CYAN: [165-210) ← Your H=199° will match here!
+    if (hsv.h >= 165.0f && hsv.h < 210.0f) {
+        if (hsv.s >= (0.4f - tolerance) && hsv.v >= (0.4f - tolerance)) {
+            return StandardColor::CYAN;
+        }
+    }
+
+    // BLUE: [210-265)
+    if (hsv.h >= 210.0f && hsv.h < 265.0f) {
+        if (hsv.s >= (0.4f - tolerance) && hsv.v >= (0.3f - tolerance)) {
+            return StandardColor::BLUE;
+        }
+    }
+
+    // PURPLE: [265-295)
+    if (hsv.h >= 265.0f && hsv.h < 295.0f) {
+        if (hsv.s >= (0.4f - tolerance) && hsv.v >= (0.3f - tolerance)) {
+            return StandardColor::PURPLE;
+        }
+    }
+
+    // MAGENTA: [295-340)
+    if (hsv.h >= 295.0f && hsv.h < 340.0f) {
+        if (hsv.s >= (0.5f - tolerance) && hsv.v >= (0.4f - tolerance)) {
+            return StandardColor::MAGENTA;
+        }
+    }
+
+    // No match found
+    return StandardColor::UNKNOWN;
+}
+
+
 
 /**
  * @brief Converts RGB sensor data into HSV color model representation.

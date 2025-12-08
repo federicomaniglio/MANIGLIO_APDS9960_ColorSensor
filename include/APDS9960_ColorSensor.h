@@ -15,6 +15,50 @@
 #include "SparkFun_APDS9960.h"
 
 /**
+ * @enum StandardColor
+ * @brief Predefined standard colors for easy color detection
+ * 
+ * This enum defines common colors that can be detected by the color sensor.
+ * Each color corresponds to specific HSV (Hue, Saturation, Value) ranges.
+ * 
+ * Color ranges (semi-open intervals [min, max)):
+ * - RED:     H=[340-360)∪[0-20), S≥0.5, V≥0.3
+ * - ORANGE:  H=[20-50), S≥0.5, V≥0.4
+ * - YELLOW:  H=[50-80), S≥0.5, V≥0.5
+ * - GREEN:   H=[80-165), S≥0.4, V≥0.3
+ * - CYAN:    H=[165-210), S≥0.4, V≥0.4
+ * - BLUE:    H=[210-265), S≥0.4, V≥0.3
+ * - PURPLE:  H=[265-295), S≥0.4, V≥0.3
+ * - MAGENTA: H=[295-340), S≥0.5, V≥0.4
+ * - WHITE:   S<0.2, V≥0.7
+ * - BLACK:   V<0.2
+ * 
+ * @note Use StandardColor::RED, StandardColor::GREEN, etc.
+ * @note UNKNOWN is returned when no color matches or on sensor read error
+ */
+enum class StandardColor : uint8_t {
+    UNKNOWN = 0,  ///< No color detected or read error
+    RED,          ///< Red color (wraps around 0°)
+    ORANGE,       ///< Orange color
+    YELLOW,       ///< Yellow color
+    GREEN,        ///< Green color
+    CYAN,         ///< Cyan color (includes light blue)
+    BLUE,         ///< Blue color
+    PURPLE,      ///< Purple color
+    MAGENTA,      ///< Magenta/Pink color
+    WHITE,        ///< White (low saturation, high value)
+    BLACK         ///< Black (very low value)
+};
+
+/**
+ * @brief Get human-readable name of a standard color
+ * @param color StandardColor enum value
+ * @return Constant string with color name in uppercase
+ * @note This is a free function, not a class method
+ */
+const char* getStandardColorName(StandardColor color);
+
+/**
  * @class ADPS9960_ColorSensor
  * @brief Wrapper class for APDS9960 color sensing with calibration support
  * 
@@ -109,15 +153,14 @@ public:
         uint8_t b;  ///< Blue channel (0-255)
     };
 
-
     /**
-     * @class HSV
+     * @struct HSV
      * @brief Represents a color in the HSV (Hue, Saturation, Value) color space
      */
     struct HSV {
-        float h;
-        float s;
-        float v;
+        float h;  ///< Hue (0-360 degrees)
+        float s;  ///< Saturation (0.0-1.0)
+        float v;  ///< Value/Brightness (0.0-1.0)
     };
 
     /**
@@ -164,13 +207,43 @@ public:
     String getColorHexString();
 
     /**
-     * @brief Reads the current color as HSV from the sensor.     *
+     * @brief Reads the current color as HSV from the sensor
      * @param hsvColor Reference to an HSV structure where the converted color
-     *                 values (hue, saturation, value) will be stored.
+     *                 values (hue, saturation, value) will be stored
      * @return True if the color was successfully read and converted; false if
-     *         the RGB reading failed or if the sensor encountered an error.
+     *         the RGB reading failed or if the sensor encountered an error
      */
     bool readColorHSV(HSV &hsvColor);
+
+    /**
+     * @brief Check if current color matches custom HSV ranges
+     * @param hMin Minimum hue value (0-360)
+     * @param hMax Maximum hue value (0-360)
+     * @param sMin Minimum saturation (0.0-1.0)
+     * @param sMax Maximum saturation (0.0-1.0)
+     * @param vMin Minimum value/brightness (0.0-1.0)
+     * @param vMax Maximum value/brightness (0.0-1.0)
+     * @return true if color is within specified ranges, false otherwise
+     */
+    bool isColorInRange(float hMin, float hMax, 
+                       float sMin, float sMax, 
+                       float vMin, float vMax);
+
+    /**
+     * @brief Check if current color matches a standard predefined color
+     * @param color StandardColor enum value to check against
+     * @param tolerance Optional tolerance factor (0.0-1.0, default: 0.15)
+     * @return true if color matches the standard, false otherwise
+     */
+    bool isStandardColor(StandardColor color, float tolerance = 0.15f);
+
+    /**
+     * @brief Detect and return the closest matching standard color
+     * @param tolerance Optional tolerance factor (0.0-1.0, default: 0.15)
+     * @return StandardColor enum of detected color, UNKNOWN if no match or error
+     * @note Checks colors in priority order: BLACK, WHITE, then chromatic colors
+     */
+    StandardColor detectColor(float tolerance = 0.15f);
 
 private:
     CalibrationStatus calibrationStatus;  ///< Current calibration state
