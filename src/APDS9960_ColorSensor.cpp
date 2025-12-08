@@ -99,7 +99,7 @@ bool ADPS9960_ColorSensor::calibrate(int samplingTimeSeconds, bool useDefaultsOn
  * @return true if calibration data is valid, false otherwise
  */
 bool ADPS9960_ColorSensor::performCalibration(int samplingTimeSeconds) {
-    delay(500);  // Allow sensor to stabilize
+    delay(500); // Allow sensor to stabilize
 
     // Reset all maximum values to zero
     max_ambient = 0;
@@ -120,7 +120,6 @@ bool ADPS9960_ColorSensor::performCalibration(int samplingTimeSeconds) {
             sensor.readRedLight(temp_red) &&
             sensor.readGreenLight(temp_green) &&
             sensor.readBlueLight(temp_blue)) {
-
             // Update maximum values if current reading is higher
             if (temp_ambient > max_ambient) max_ambient = temp_ambient;
             if (temp_red > max_red) max_red = temp_red;
@@ -130,7 +129,7 @@ bool ADPS9960_ColorSensor::performCalibration(int samplingTimeSeconds) {
             samples++;
         }
 
-        delay(100);  // Prevent sensor saturation and allow processing time
+        delay(100); // Prevent sensor saturation and allow processing time
     }
 
     // Validate that collected data meets quality requirements
@@ -240,7 +239,7 @@ bool ADPS9960_ColorSensor::isCalibrated() const {
  *         - "CALIBRATED_WITH_DEFAULTS" - Using fallback default values
  *         - "UNKNOWN" - Should never occur
  */
-const char* ADPS9960_ColorSensor::getCalibrationStatusName() const {
+const char *ADPS9960_ColorSensor::getCalibrationStatusName() const {
     switch (calibrationStatus) {
         case NOT_CALIBRATED:
             return "NOT_CALIBRATED";
@@ -351,8 +350,8 @@ uint32_t ADPS9960_ColorSensor::readColorHex() {
 
     // Combine R, G, B into 0xRRGGBB format
     // Bit shift: R << 16 | G << 8 | B
-    return (static_cast<uint32_t>(r) << 16) | 
-           (static_cast<uint32_t>(g) << 8) | 
+    return (static_cast<uint32_t>(r) << 16) |
+           (static_cast<uint32_t>(g) << 8) |
            static_cast<uint32_t>(b);
 }
 
@@ -375,8 +374,8 @@ bool ADPS9960_ColorSensor::readColorHex(uint32_t &hexColor) {
     }
 
     // Pack RGB into hexadecimal format
-    hexColor = (static_cast<uint32_t>(r) << 16) | 
-               (static_cast<uint32_t>(g) << 8) | 
+    hexColor = (static_cast<uint32_t>(r) << 16) |
+               (static_cast<uint32_t>(g) << 8) |
                static_cast<uint32_t>(b);
     return true;
 }
@@ -395,10 +394,76 @@ bool ADPS9960_ColorSensor::readColorHex(uint32_t &hexColor) {
 String ADPS9960_ColorSensor::getColorHexString() {
     const uint32_t hex = readColorHex();
 
-    char buffer[8];  // "#RRGGBB\0" = 8 characters with null terminator
-    sprintf(buffer, "#%06lX", hex);  // Format with 6 hex digits, uppercase
+    char buffer[8]; // "#RRGGBB\0" = 8 characters with null terminator
+    sprintf(buffer, "#%06lX", hex); // Format with 6 hex digits, uppercase
 
     return {buffer};
+}
+
+/**
+ * @brief Converts RGB sensor data into HSV color model representation.
+ *
+ * Reads RGB values from the sensor and calculates the corresponding
+ * HSV (Hue, Saturation, Value) representation. The conversion uses
+ * normalized RGB values and computes the maximum, minimum, and delta
+ * values to derive hue, saturation, and value components.
+ *
+ * @param hsvColor An HSV structure to store the converted color data.
+ *
+ * @return True if the color data is successfully read and converted,
+ *         otherwise false if the RGB data cannot be read.
+ */
+bool ADPS9960_ColorSensor::readColorHSV(HSV &hsvColor) {
+    RGB rgbColor{};
+    if (!readRGB(rgbColor)) {
+        return false;
+    }
+    const float rf = static_cast<float>(rgbColor.r) / 255.0f;
+    const float gf = static_cast<float>(rgbColor.g) / 255.0f;
+    const float bf = static_cast<float>(rgbColor.b) / 255.0f;
+
+    float maxc = rf;
+    if (gf > maxc) maxc = gf;
+    if (bf > maxc) maxc = bf;
+
+    float minc = rf;
+    if (gf < minc) minc = gf;
+    if (bf < minc) minc = bf;
+
+    const float delta = maxc - minc;
+
+    // V (value) = max
+    hsvColor.v = maxc;
+
+    // gray/white/black
+    if (delta < 0.00001f) {
+        hsvColor.h = 0;
+        hsvColor.s = 0;
+        return true;
+    }
+
+    // S (saturation)
+    hsvColor.s = delta / maxc;
+
+    // H (hue)
+    float h;
+
+    if (maxc == rf) {
+        h = (gf - bf) / delta;
+        if (h < 0.0f)
+            h += 6.0f;
+    }
+    else if (maxc == gf) {
+        h = ((bf - rf) / delta) + 2.0f;
+    }
+    else { // maxc == bf
+        h = ((rf - gf) / delta) + 4.0f;
+    }
+
+    h *= 60.0f; // in degrees 0-360
+    hsvColor.h = h;
+
+    return true;
 }
 
 /**

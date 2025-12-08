@@ -109,6 +109,17 @@ public:
         uint8_t b;  ///< Blue channel (0-255)
     };
 
+
+    /**
+     * @class HSV
+     * @brief Represents a color in the HSV (Hue, Saturation, Value) color space
+     */
+    struct HSV {
+        float h;
+        float s;
+        float v;
+    };
+
     /**
      * @brief Read raw 16-bit color data from sensor
      * @param raw Reference to RawColor struct to fill
@@ -151,6 +162,15 @@ public:
      * @return String in "#RRGGBB" format (e.g., "#FF0000" for red)
      */
     String getColorHexString();
+
+    /**
+     * @brief Reads the current color as HSV from the sensor.     *
+     * @param hsvColor Reference to an HSV structure where the converted color
+     *                 values (hue, saturation, value) will be stored.
+     * @return True if the color was successfully read and converted; false if
+     *         the RGB reading failed or if the sensor encountered an error.
+     */
+    bool readColorHSV(HSV &hsvColor);
 
 private:
     CalibrationStatus calibrationStatus;  ///< Current calibration state
