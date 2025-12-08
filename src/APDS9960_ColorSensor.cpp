@@ -61,7 +61,10 @@ ADPS9960_ColorSensor::ADPS9960_ColorSensor()
  */
 bool ADPS9960_ColorSensor::begin() {
     // Initialize sensor hardware and enable light sensing (no interrupts)
-    return sensor.init() && sensor.enableLightSensor(false);
+    if (!sensor.init())
+        return false;
+    delay(100); // Allow sensor to stabilize
+    return sensor.enableLightSensor(false);
 }
 
 /**
