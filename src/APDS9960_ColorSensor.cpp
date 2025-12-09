@@ -52,19 +52,31 @@ ADPS9960_ColorSensor::ADPS9960_ColorSensor()
 }
 
 /**
- * @brief Initialize the APDS9960 sensor hardware
- * 
- * Calls the underlying SparkFun library to initialize I2C communication
- * and enables the light sensor without interrupts.
- * 
- * @return true if both init and light sensor enable succeed, false otherwise
+ * @brief Initializes the APDS9960 color sensor for operation.
+ *
+ * This method sets up the APDS9960 hardware by performing initialization,
+ * enabling light sensing, and verifying functionality through a test read
+ * of the ambient light sensor.
+ *
+ * @return True if the sensor successfully reads ambient light, false otherwise.
+ *
+ * @note The method attempts to initialize the sensor even if some steps fail internally.
+ * @note Includes delays to allow the sensor hardware to stabilize after initialization and enabling light sensing.
  */
 bool ADPS9960_ColorSensor::begin() {
-    // Initialize sensor hardware and enable light sensing (no interrupts)
-    if (!sensor.init())
-        return false;
-    delay(100); // Allow sensor to stabilize
-    return sensor.enableLightSensor(false);
+    this->sensor = SparkFun_APDS9960();
+
+    // Initialize sensor hardware (may fail but still configure registers)
+    sensor.init();
+    delay(100); // Allow sensor to stabilize after init
+
+    // Enable light sensing (no interrupts)
+    sensor.enableLightSensor(false);
+    delay(50);  // Give time for light sensor to start
+
+    // Verify sensor is actually working by attempting a read
+    uint16_t ambientTest;
+    return sensor.readAmbientLight(ambientTest);
 }
 
 /**
